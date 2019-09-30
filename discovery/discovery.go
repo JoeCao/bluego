@@ -12,7 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func Run(adapterID string, onlyBeacon bool) ([]*device.Device1Properties, error) {
+func Run(adapterID string, onlyBeacon bool) ([]device.Device1Properties, error) {
 	//clean up connection on exit
 	defer api.Exit()
 
@@ -33,7 +33,7 @@ func Run(adapterID string, onlyBeacon bool) ([]*device.Device1Properties, error)
 		return nil, err
 	}
 	defer cancel()
-	var list = make([]*device.Device1Properties, 10)
+	var list = make([]device.Device1Properties, 10)
 
 	go func() {
 		for ev := range discovery {
@@ -55,7 +55,7 @@ func Run(adapterID string, onlyBeacon bool) ([]*device.Device1Properties, error)
 			log.Infof("name=%s addr=%s addrType=%s rssi=%d",
 				dev.Properties.Name, dev.Properties.Address,
 				dev.Properties.AddressType, dev.Properties.RSSI)
-			list = append(list, dev.Properties)
+			list = append(list, *dev.Properties)
 			//err = handleBeacon(dev)
 			//if err != nil {
 			//	log.Errorf("%s: %s", ev.Path, err)
