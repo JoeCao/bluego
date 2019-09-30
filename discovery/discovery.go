@@ -2,6 +2,8 @@ package discovery
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/muka/go-bluetooth/api"
 	"github.com/muka/go-bluetooth/api/beacon"
@@ -10,33 +12,31 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func Run(adapterID string, onlyBeacon bool) error {
-
+func Run(adapterID string, onlyBeacon bool) ([]*device.Device1Properties, error) {
 	//clean up connection on exit
 	defer api.Exit()
 
 	a, err := adapter.GetAdapter(adapterID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	log.Debug("Flush cached devices")
 	err = a.FlushDevices()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	log.Debug("Start discovery")
 	discovery, cancel, err := Discover(a, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer cancel()
+	var list = make([]*device.Device1Properties, 10)
 
 	go func() {
-
 		for ev := range discovery {
-			log.Infof("got path %s type %d", ev.Path, ev.Type)
 
 			if ev.Type == adapter.DeviceRemoved {
 				continue
@@ -55,7 +55,7 @@ func Run(adapterID string, onlyBeacon bool) error {
 			log.Infof("name=%s addr=%s addrType=%s rssi=%d",
 				dev.Properties.Name, dev.Properties.Address,
 				dev.Properties.AddressType, dev.Properties.RSSI)
-
+			list = append(list, dev.Properties)
 			//err = handleBeacon(dev)
 			//if err != nil {
 			//	log.Errorf("%s: %s", ev.Path, err)
@@ -64,7 +64,11 @@ func Run(adapterID string, onlyBeacon bool) error {
 
 	}()
 
-	select {}
+	select {
+	case <-time.After(time.Second * 10):
+		fmt.Println("timeout")
+		return list, nil
+	}
 }
 
 // Discover start device discovery
