@@ -8,6 +8,6 @@ import (
 
 func main() {
 	fmt.Println(quote.Hello())
-	discovery.Run("hci0", false)
+	_ = discovery.Run("hci0", false)
 	select {}
 }

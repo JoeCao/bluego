@@ -42,6 +42,7 @@ func Run(adapterID string, onlyBeacon bool) error {
 			}
 
 			dev, err := device.NewDevice1(ev.Path)
+			log.Info("got path %s", ev.Path)
 			if err != nil {
 				log.Errorf("%s: %s", ev.Path, err)
 				continue
@@ -51,8 +52,9 @@ func Run(adapterID string, onlyBeacon bool) error {
 				log.Errorf("%s: not found", ev.Path)
 				continue
 			}
-
-			log.Infof("name=%s addr=%s rssi=%d", dev.Properties.Name, dev.Properties.Address, dev.Properties.RSSI)
+			log.Infof("name=%s addr=%s addrType=%s rssi=%d",
+				dev.Properties.Name, dev.Properties.Address,
+				dev.Properties.AddressType, dev.Properties.RSSI)
 
 			err = handleBeacon(dev)
 			if err != nil {
@@ -68,11 +70,11 @@ func Run(adapterID string, onlyBeacon bool) error {
 // Discover start device discovery
 func Discover(a *adapter.Adapter1, filter *adapter.DiscoveryFilter) (chan *adapter.DeviceDiscovered, func(), error) {
 
-	err := a.SetPairable(true)
+	err := a.SetPairable(false)
 	if err != nil {
 		return nil, nil, err
 	}
-	err = a.SetDiscoverable(true)
+	err = a.SetDiscoverable(false)
 	if err != nil {
 		return nil, nil, err
 	}
