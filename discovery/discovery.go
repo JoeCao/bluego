@@ -2,38 +2,40 @@ package discovery
 
 import (
 	"context"
-	"fmt"
-	"time"
-
 	"github.com/muka/go-bluetooth/api"
 	"github.com/muka/go-bluetooth/api/beacon"
 	"github.com/muka/go-bluetooth/bluez/profile/adapter"
 	"github.com/muka/go-bluetooth/bluez/profile/device"
 	log "github.com/sirupsen/logrus"
+	"strings"
 )
 
-func Run(adapterID string, onlyBeacon bool) ([]device.Device1Properties, error) {
+func Run(adapterID string, onlyBeacon bool) (chan *device.Device1, func(), error) {
 	//clean up connection on exit
-	defer api.Exit()
+	//defer api.Exit()
 
 	a, err := adapter.GetAdapter(adapterID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	log.Debug("Flush cached devices")
 	err = a.FlushDevices()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	log.Debug("Start discovery")
 	discovery, cancel, err := Discover(a, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	defer cancel()
-	var list = make([]device.Device1Properties, 10)
+	//defer cancel()
+	var listChan = make(chan *device.Device1)
+	exit := func() {
+		cancel()
+		api.Exit()
+	}
 
 	go func() {
 		for ev := range discovery {
@@ -55,7 +57,10 @@ func Run(adapterID string, onlyBeacon bool) ([]device.Device1Properties, error) 
 			log.Infof("name=%s addr=%s addrType=%s rssi=%d",
 				dev.Properties.Name, dev.Properties.Address,
 				dev.Properties.AddressType, dev.Properties.RSSI)
-			list = append(list, *dev.Properties)
+			if dev.Properties.Name != "" && strings.HasPrefix(dev.Properties.Name, "K18S") {
+				log.Infof("got bracelet %s \n", dev.Properties.Name)
+				listChan <- dev
+			}
 			//err = handleBeacon(dev)
 			//if err != nil {
 			//	log.Errorf("%s: %s", ev.Path, err)
@@ -63,12 +68,11 @@ func Run(adapterID string, onlyBeacon bool) ([]device.Device1Properties, error) 
 		}
 
 	}()
-
-	select {
-	case <-time.After(time.Second * 10):
-		fmt.Println("timeout")
-		return list, nil
-	}
+	//for pro := range listChan {
+	//	fmt.Printf("获取到设备名%s 设备地址%s ,设备类型%s, 强度%d \n",
+	//		pro.Name, pro.Address, pro.AddressType, pro.RSSI)
+	//}
+	return listChan, exit, nil
 }
 
 // Discover start device discovery
