@@ -36,13 +36,13 @@ func Run(adapterID string, onlyBeacon bool) error {
 	go func() {
 
 		for ev := range discovery {
+			log.Infof("got path %s type %d", ev.Path, ev.Type)
 
 			if ev.Type == adapter.DeviceRemoved {
 				continue
 			}
 
 			dev, err := device.NewDevice1(ev.Path)
-			log.Info("got path %s", ev.Path)
 			if err != nil {
 				log.Errorf("%s: %s", ev.Path, err)
 				continue
@@ -56,10 +56,10 @@ func Run(adapterID string, onlyBeacon bool) error {
 				dev.Properties.Name, dev.Properties.Address,
 				dev.Properties.AddressType, dev.Properties.RSSI)
 
-			err = handleBeacon(dev)
-			if err != nil {
-				log.Errorf("%s: %s", ev.Path, err)
-			}
+			//err = handleBeacon(dev)
+			//if err != nil {
+			//	log.Errorf("%s: %s", ev.Path, err)
+			//}
 		}
 
 	}()
