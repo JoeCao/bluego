@@ -107,22 +107,22 @@ func InitDevice(dev *device.Device1) {
 	}()
 }
 func main() {
-	bracelet, err := device.NewDevice1("/org/bluez/hci0/dev_E2_C9_18_4F_8F_D9")
-	if err != nil {
-		log.Errorf(" connect bracelet fail")
-	}
-	var device1s []*device.Device1
-	exif := func() {
-		for _, dev := range device1s {
-			log.Infof("disconnecting %s", dev.Properties.Name)
-			_ = dev.Disconnect()
-		}
-		log.Info("stopping discovery")
-	}
-	defer exif()
-	device1s = append(device1s, bracelet)
-	InitDevice(bracelet)
-	//HandleBracelet()
+	//bracelet, err := device.NewDevice1("/org/bluez/hci0/dev_E2_C9_18_4F_8F_D9")
+	//if err != nil {
+	//	log.Errorf(" connect bracelet fail")
+	//}
+	//var device1s []*device.Device1
+	//exif := func() {
+	//	for _, dev := range device1s {
+	//		log.Infof("disconnecting %s", dev.Properties.Name)
+	//		_ = dev.Disconnect()
+	//	}
+	//	log.Info("stopping discovery")
+	//}
+	//defer exif()
+	//device1s = append(device1s, bracelet)
+	//InitDevice(bracelet)
+	HandleBracelet()
 	select {}
 
 }
