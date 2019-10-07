@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"github.com/muka/go-bluetooth/bluez/profile/device"
 	log "github.com/sirupsen/logrus"
+	"os"
+	"os/signal"
 	"time"
 )
 
@@ -24,7 +26,7 @@ type Bracelet struct {
 	ExitFun func()
 }
 
-func HandleBracelet() {
+func HandleBracelet(ch chan os.Signal) {
 	braceletChan, exit, err := discovery.Run("hci0", false)
 	if err != nil {
 		log.Fatal("can not find")
@@ -38,15 +40,22 @@ func HandleBracelet() {
 		log.Info("stopping discovery")
 		exit()
 	}
-
 	defer exif()
-	for dev := range braceletChan {
-		device1s = append(device1s, dev)
-		InitDevice(dev)
+	for {
+		select {
+		case dev := <-braceletChan:
+			device1s = append(device1s, dev)
+			InitDevice(dev, ch)
+		case sig := <-ch:
+			log.Infof("收到退出的消息 %s", sig)
+			goto end
+
+		}
 	}
+end:
 }
 
-func InitDevice(dev *device.Device1) {
+func InitDevice(dev *device.Device1, ch chan os.Signal) {
 	pro := dev.Properties
 	fmt.Printf("获取到设备名%s 设备地址%s ,设备类型%s, 强度%d \n",
 		pro.Name, pro.Address, pro.AddressType, pro.RSSI)
@@ -56,13 +65,9 @@ func InitDevice(dev *device.Device1) {
 		panic("connection fail")
 	}
 	log.Infof("连接成功")
-	//mapValue, err := dev.GetManufacturerData()
-	//if err != nil {
-	//	log.Errorf("can not get manufacture", err)
-	//}
-	//for k, v := range mapValue {
-	//	fmt.Printf("key[%s] value[%s]\n", k, v)
-	//}
+	//暂停100ms等消息返回
+	time.Sleep(1000 * time.Millisecond)
+
 	chAll, err := dev.GetCharacteristics()
 	if err != nil {
 		log.Errorf("can not get services", err)
@@ -94,16 +99,24 @@ func InitDevice(dev *device.Device1) {
 	}
 	go func() {
 		for {
-			b, err := rx.ReadValue(nil)
-			if err != nil {
-				log.Errorf("got error while reading")
+			select {
+			case <-time.After(time.Second * 1):
+				b, err := rx.ReadValue(nil)
+				if err != nil {
+					log.Errorf("got error while reading")
+				}
+				s := fmt.Sprintf("%x", b)
+				log.Info(s)
+			case sig := <-ch:
+				log.Infof("收到退出的消息 %s", sig)
+				goto end
+
 			}
-			s := fmt.Sprintf("%x", b)
-			log.Info(s)
+
 			time.Sleep(time.Second)
 
 		}
-
+	end:
 	}()
 }
 func main() {
@@ -122,7 +135,8 @@ func main() {
 	//defer exif()
 	//device1s = append(device1s, bracelet)
 	//InitDevice(bracelet)
-	HandleBracelet()
-	select {}
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	HandleBracelet(c)
 
 }
