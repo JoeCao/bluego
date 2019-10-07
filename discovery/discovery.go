@@ -58,13 +58,10 @@ func Run(adapterID string, onlyBeacon bool) (chan *device.Device1, func(), error
 				dev.Properties.Name, dev.Properties.Address,
 				dev.Properties.AddressType, dev.Properties.RSSI)
 			if dev.Properties.Name != "" && strings.HasPrefix(dev.Properties.Name, "K18S") {
-				log.Infof("got bracelet %s \n", dev.Properties.Name)
+				log.Infof("got bracelet %s \n", ev.Path)
 				listChan <- dev
 			}
-			//err = handleBeacon(dev)
-			//if err != nil {
-			//	log.Errorf("%s: %s", ev.Path, err)
-			//}
+
 		}
 
 	}()
