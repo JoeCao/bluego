@@ -2,7 +2,7 @@ module bluego
 
 require (
 	github.com/fatih/structs v1.1.0 // indirect
-	github.com/godbus/dbus v4.1.0+incompatible // indirect
+	github.com/godbus/dbus v4.1.0+incompatible
 	github.com/karalabe/hid v1.0.0
 	github.com/muka/go-bluetooth v0.0.0-20190905083735-68fa9c3514a2
 	github.com/sirupsen/logrus v1.4.2
