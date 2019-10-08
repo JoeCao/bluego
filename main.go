@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func HandleBracelet(ch chan os.Signal) {
+func HandleBracelet(ch chan string) {
 	braceletChan, exit, err := discovery.Run("hci0", false)
 	if err != nil {
 		log.Fatal("can not find")
@@ -50,16 +50,31 @@ func main() {
 	defer exif()
 
 	c := make(chan os.Signal, 1)
+	ch := make(chan string)
 	signal.Notify(c, os.Interrupt)
 
-	bracelet, _ := s18.OpenBracelet("/org/bluez/hci0/dev_E2_C9_18_4F_8F_D9", c)
+	bracelet, _ := s18.OpenBracelet("/org/bluez/hci0/dev_E2_C9_18_4F_8F_D9", ch)
 	bracelets = append(bracelets, bracelet)
-	_ = bracelet.GetBattery()
+	capacity, _ := bracelet.GetBattery()
+	log.Infof("剩余电量为%d", capacity)
 	time.Sleep(2 * time.Second)
 
 	//HandleBracelet(c)
-	_ = bracelet.GetVersion()
+	v, _ := bracelet.GetVersion()
+	log.Infof("版本号为%s", v)
 	time.Sleep(2 * time.Second)
-	_ = bracelet.GetHeartBeat()
-	time.Sleep(4 * time.Second)
+	log.Info(bracelet.StartHeartBeat())
+	for {
+		select {
+		case <-time.After(time.Second * 1):
+			resp, _ := bracelet.GetHeartBeat()
+			log.Infof("心跳为%v", resp)
+		case sig := <-c:
+			log.Info("收到操作系统的消息%s", sig)
+			goto end
+		}
+	}
+end:
+	log.Info(bracelet.StopHeartBeat())
+	ch <- "退出"
 }
