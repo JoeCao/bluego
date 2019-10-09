@@ -58,11 +58,13 @@ func main() {
 	capacity, _ := bracelet.GetBattery()
 	log.Infof("剩余电量为%d", capacity)
 	time.Sleep(2 * time.Second)
-
 	//HandleBracelet(c)
 	v, _ := bracelet.GetVersion()
 	log.Infof("版本号为%s", v)
 	time.Sleep(2 * time.Second)
+	log.Info(bracelet.Notification("曹祖鹏"))
+	log.Info(bracelet.Reset())
+	time.Sleep(100 * time.Millisecond)
 	log.Info(bracelet.StartHeartBeat())
 	for {
 		select {

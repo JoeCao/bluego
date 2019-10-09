@@ -3,6 +3,7 @@ package s18
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"github.com/godbus/dbus"
 	"github.com/muka/go-bluetooth/bluez/profile/device"
@@ -124,6 +125,7 @@ func (bracelet *Bracelet) write(base *Base) (err error) {
 	err = bracelet.tx.WriteValue(bs.Bytes(), nil)
 	if err != nil {
 		log.Errorf("got error while write")
+		panic("write error")
 		return err
 	}
 	return nil
@@ -140,51 +142,98 @@ func (bracelet *Bracelet) GetBattery() (capacity uint8, err error) {
 	}
 }
 
-func (bracelet *Bracelet) GetVersion() (v string, err error) {
+func (bracelet *Bracelet) GetVersion() (v interface{}, err error) {
 	base := NewBase()
 	base.CommandId = 0x07
 	_ = bracelet.write(base)
-	select {
-	case b1 := <-bracelet.retCh:
+	callback := func(b1 *[]byte) (interface{}, error) {
 		b2 := *b1
 		slice := b2[4:8]
 		return fmt.Sprintf("%x", slice), nil
 	}
+	return bracelet.getRet(callback)
 }
 
-func (bracelet *Bracelet) StartHeartBeat() (ok string, err error) {
+func (bracelet *Bracelet) StartHeartBeat() (ok interface{}, err error) {
 	base := NewBase()
 	base.CommandId = 0x06
 	base.Content = []byte{0x01}
-	_ = bracelet.write(base)
-	select {
-	case b1 := <-bracelet.retCh:
+	callback := func(b1 *[]byte) (interface{}, error) {
 		return fmt.Sprintf("%x", *b1), nil
 	}
+	_ = bracelet.write(base)
+	return bracelet.getRet(callback)
 }
 
-func (bracelet *Bracelet) StopHeartBeat() (ok string, err error) {
+func (bracelet *Bracelet) StopHeartBeat() (ok interface{}, err error) {
 	base := NewBase()
 	base.CommandId = 0x06
 	base.Content = []byte{0x02}
-	_ = bracelet.write(base)
-	select {
-	case b1 := <-bracelet.retCh:
+	callback := func(b1 *[]byte) (interface{}, error) {
 		return fmt.Sprintf("%x", *b1), nil
 	}
+	_ = bracelet.write(base)
+	return bracelet.getRet(callback)
 }
 
-func (bracelet *Bracelet) GetHeartBeat() (h HeartBeatResponse, err error) {
+func (bracelet *Bracelet) GetHeartBeat() (h interface{}, err error) {
 	base := NewBase()
 	base.CommandId = 0x06
 	base.Content = []byte{0x00}
 	_ = bracelet.write(base)
-	select {
-	case b1 := <-bracelet.retCh:
+	callback := func(b1 *[]byte) (interface{}, error) {
 		resp, err := NewResponse(b1)
 		if err != nil {
 			return resp, err
 		}
 		return resp, nil
+	}
+	return bracelet.getRet(callback)
+}
+
+func (bracelet *Bracelet) Reset() (ok interface{}, err error) {
+	base := NewBase()
+	base.CommandId = 0x11
+	base.Content = []byte{0x01}
+	_ = bracelet.write(base)
+	callback := func(b1 *[]byte) (interface{}, error) {
+		return fmt.Sprintf("%x", *b1), nil
+	}
+	return bracelet.getRet(callback)
+}
+
+func (bracelet *Bracelet) Notification(content string) (ok interface{}, err error) {
+	x := &bytes.Buffer{}
+	x.WriteByte(0x00)
+	x.Write([]byte(content))
+	base := NewBase()
+	base.CommandId = 0x08
+	base.Content = x.Bytes()
+	_ = bracelet.write(base)
+	callback := func(b1 *[]byte) (interface{}, error) {
+		return fmt.Sprintf("%x", *b1), nil
+	}
+	return bracelet.getRet(callback)
+}
+
+func (bracelet *Bracelet) CallNoti(content string) (ok interface{}, err error) {
+	x := &bytes.Buffer{}
+	x.Write([]byte(content))
+	base := NewBase()
+	base.CommandId = 0x01
+	base.Content = x.Bytes()
+	_ = bracelet.write(base)
+	callback := func(b1 *[]byte) (interface{}, error) {
+		return fmt.Sprintf("%x", *b1), nil
+	}
+	return bracelet.getRet(callback)
+}
+
+func (bracelet *Bracelet) getRet(callback func(*[]byte) (interface{}, error)) (ret interface{}, err error) {
+	select {
+	case b1 := <-bracelet.retCh:
+		return callback(b1)
+	case <-time.After(3 * time.Second):
+		return nil, errors.New("time out")
 	}
 }
