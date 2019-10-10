@@ -13,18 +13,20 @@ import (
 )
 
 type Bracelet struct {
-	Name  string
-	dev   *device.Device1
-	rx    *gatt.GattCharacteristic1
-	tx    *gatt.GattCharacteristic1
-	retCh chan *[]byte
+	Name      string
+	dev       *device.Device1
+	rx        *gatt.GattCharacteristic1
+	tx        *gatt.GattCharacteristic1
+	retCh     chan *[]byte
+	connQueue chan string
 }
 
 func RBracelet(device *device.Device1, ch chan string) (bracelet *Bracelet, err error) {
 	br := &Bracelet{
-		dev:   device,
-		Name:  device.Properties.Name,
-		retCh: make(chan *[]byte),
+		dev:       device,
+		Name:      device.Properties.Name,
+		retCh:     make(chan *[]byte),
+		connQueue: make(chan string),
 	}
 	_ = br.InitBracelet(ch)
 	return br, nil
@@ -49,6 +51,25 @@ func (bracelet *Bracelet) InitBracelet(ch chan string) (err error) {
 		return err
 	}
 	log.Infof("连接成功%s", bracelet.Name)
+	go func() {
+		for x := range bracelet.connQueue {
+			log.Warnf("感知到断开，开始重连 %s", x)
+			f, _ := bracelet.dev.GetConnected()
+			if !f {
+				log.Info("开始重连")
+				_ = bracelet.dev.Disconnect()
+				log.Info("断开成功")
+				err = bracelet.dev.Connect()
+				if err != nil {
+					log.Warn("重连失败，等待重试")
+				}
+				log.Info("重连成功")
+			} else {
+				log.Info("仍然是连接状态")
+			}
+
+		}
+	}()
 	//暂停1000ms等消息返回
 	time.Sleep(1000 * time.Millisecond)
 
@@ -125,7 +146,7 @@ func (bracelet *Bracelet) write(base *Base) (err error) {
 	err = bracelet.tx.WriteValue(bs.Bytes(), nil)
 	if err != nil {
 		log.Errorf("got error while write")
-		panic("write error")
+		bracelet.connQueue <- "error"
 		return err
 	}
 	return nil
