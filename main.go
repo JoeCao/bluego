@@ -40,6 +40,11 @@ end:
 }
 
 func main() {
+	list, _ := discovery.RunWithin("hci0", 10)
+	for _, l := range list {
+		log.Infof("name:%s rssi:%d", l.Properties.Name, l.Properties.RSSI)
+	}
+	time.Sleep(10 * time.Second)
 	var bracelets []*s18.Bracelet
 	exif := func() {
 		for _, b := range bracelets {

@@ -8,8 +8,63 @@ import (
 	"github.com/muka/go-bluetooth/bluez/profile/device"
 	log "github.com/sirupsen/logrus"
 	"strings"
+	"time"
 )
 
+func RunWithin(adapterID string, duration uint8) ([]*device.Device1, error) {
+
+	a, err := adapter.GetAdapter(adapterID)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Debug("Flush cached devices")
+	err = a.FlushDevices()
+	if err != nil {
+		return nil, err
+	}
+
+	log.Debug("Start discovery")
+	discovery, cancel, err := Discover(a, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer cancel()
+	var dlist []*device.Device1
+	ch := make(chan int)
+	go func() {
+		select {
+		case <-time.After(time.Duration(duration) * time.Second):
+			close(ch)
+		}
+	}()
+	for {
+		select {
+		case ev := <-discovery:
+			if ev.Type == adapter.DeviceRemoved {
+				continue
+			}
+
+			dev, err := device.NewDevice1(ev.Path)
+			if err != nil {
+				log.Errorf("%s: %s", ev.Path, err)
+				continue
+			}
+
+			if dev == nil {
+				log.Errorf("%s: not found", ev.Path)
+				continue
+			}
+
+			dlist = append(dlist, dev)
+			log.Infof("name=%s addr=%s addrType=%s rssi=%d",
+				dev.Properties.Name, dev.Properties.Address,
+				dev.Properties.AddressType, dev.Properties.RSSI)
+		case _ = <-ch:
+			return dlist, nil
+		}
+	}
+}
 func Run(adapterID string, onlyBeacon bool) (chan *device.Device1, func(), error) {
 	//clean up connection on exit
 	//defer api.Exit()
