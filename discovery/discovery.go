@@ -35,7 +35,7 @@ func RunWithin(adapterID string, duration uint8) ([]*device.Device1, error) {
 	go func() {
 		select {
 		case <-time.After(time.Duration(duration) * time.Second):
-			close(ch)
+			ch <- 0
 		}
 	}()
 	for {

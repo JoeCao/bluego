@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!--导入element-ui样式表-->
+    <link rel="stylesheet" href="/static/css/element_index.css"/>
+
+    <!--导入工程的样式表-->
+    <link rel="stylesheet" href="/static/css/index.css"/>
+    <title>蓝牙设备扫描</title>
+</head>
+<body>
+<div id="vue-app">
+    <tabel-detail></tabel-detail>
+</div>
+</body>
+<!--引入相应的包-->
+<!--让js文件可以使用Flask.url_for-->
+<!--Vue.js-->
+<script src="/static/js/vue.js"></script>
+<!--element-ui-->
+<script src="/static/js/element-index.js"></script>
+<!--datatable.js-->
+<script src="/static/js/data-tables.js"></script>
+<!--axios.js-->
+<script src="/static/js/axios.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.5/socket.io.min.js"></script>
+
+<!--templates-->
+<script type="text/x-template" id="tabel-detail-template">
+    <div>
+        <data-tables title="已连接的设备" :data='tableData' :actions-def="getActionsDef()"
+                     :pagination-def="getPaginationDef()"
+                     :row-action-def="getConnectedRowActionDef()"
+                     action-col-width="40">
+            <el-table-column label="地址" prop="address" width="180"></el-table-column>
+            <el-table-column label="类型" prop="addrType" width="100"></el-table-column>
+            <el-table-column label="名称" prop="localName" with="100"></el-table-column>
+            <el-table-column label="状态" prop="statusStr" with="100"></el-table-column>
+        </data-tables>
+        <el-dialog title="附近蓝牙设备" width="100%" :visible.sync="scanTableVisible">
+            <data-tables :data="gridData" v-loading="loading" width="800"
+                         :pagination-def="getPaginationDef()"
+                         :row-action-def="getRowActionsDef()"
+                         action-col-width="40">
+                <el-table-column label="地址" prop="addr" width="160">
+                </el-table-column>
+                <el-table-column label="类型" prop="addrType" width="100"></el-table-column>
+                <el-table-column label="制造商" prop="Manufacturer" width="200"></el-table-column>
+                <el-table-column label="名称" prop="CompleteLocalName" with="100"></el-table-column>
+            </data-tables>
+        </el-dialog>
+
+
+        <el-dialog :title="formTitle" :visible.sync="dialogFormVisible">
+            <el-form :model="form" @submit.native.prevent>
+                <el-form-item label="数据">
+                    <el-input ref="valueInput" v-model.trim="form.name" auto-complete="off"
+                              @keyup.enter.native="createOrUpdate"></el-input>
+                </el-form-item>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+                <el-button @click="dialogFormVisible = false">取 消</el-button>
+                <el-button type="primary" @click="createOrUpdate">确 定</el-button>
+            </div>
+        </el-dialog>
+        <el-dialog :title="reportTitle" :visible.sync="statusVisible">
+
+            <div>
+                <p>手环编号: {[running.bracelet_name]}</p>
+                <p>状态:{[running.data]}</p>
+                <p>心跳:{[running.heart_beat]} /每分钟</p>
+                <p>步数:{[running.peace_count]} 步</p>
+                <p>里程:{[running.meter_count]} 米</p>
+                <p>消耗:{[running.calorie]} 卡路里</p>
+                <p>速度:{[running.peace_speed]}/每小时</p>
+            </div>
+            <div slot="footer" class="dialog-footer">
+                <el-button type="primary" @click="closeBracelet">确 定</el-button>
+            </div>
+        </el-dialog>
+    </div>
+</script>
+
+<!--项目js-->
+<script src="/static/js/index.js"></script>
+</html>
