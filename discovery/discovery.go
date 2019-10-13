@@ -2,6 +2,7 @@ package discovery
 
 import (
 	"context"
+	"fmt"
 	"github.com/muka/go-bluetooth/api"
 	"github.com/muka/go-bluetooth/api/beacon"
 	"github.com/muka/go-bluetooth/bluez/profile/adapter"
@@ -11,7 +12,7 @@ import (
 	"time"
 )
 
-func RunWithin(adapterID string, duration uint8) ([]*device.Device1, error) {
+func RunWithin(adapterID string, duration uint8) ([]map[string]string, error) {
 
 	a, err := adapter.GetAdapter(adapterID)
 	if err != nil {
@@ -30,7 +31,7 @@ func RunWithin(adapterID string, duration uint8) ([]*device.Device1, error) {
 		return nil, err
 	}
 	defer cancel()
-	var dlist []*device.Device1
+	var dlist []map[string]string
 	ch := make(chan int)
 	go func() {
 		select {
@@ -55,8 +56,13 @@ func RunWithin(adapterID string, duration uint8) ([]*device.Device1, error) {
 				log.Errorf("%s: not found", ev.Path)
 				continue
 			}
-
-			dlist = append(dlist, dev)
+			m := map[string]string{
+				"index":             fmt.Sprintf("%s", ev.Path),
+				"addr":              dev.Properties.Address,
+				"CompleteLocalName": dev.Properties.Name,
+				"addrType":          dev.Properties.AddressType,
+			}
+			dlist = append(dlist, m)
 			log.Infof("name=%s addr=%s addrType=%s rssi=%d",
 				dev.Properties.Name, dev.Properties.Address,
 				dev.Properties.AddressType, dev.Properties.RSSI)

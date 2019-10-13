@@ -181,12 +181,14 @@ Vue.component('tabel-detail', {
 
             namespace = '/test';
 
-            wsuri = (location.protocol + '//' + document.domain + ':' + location.port + namespace);
-            this.websocket = io.connect(wsuri)
+            wsuri = ('ws://' + document.domain + ':' + location.port);
+            this.websocket = io({transports: ['websocket'], upgrade: false});
+            // this.websocket = io.connect(wsuri)
             this.websocket.on('server_response', self.websocketOnMessage)
             this.websocket.on('command_response', self.commandOnMessage)
             this.websocket.onclose = self.websocketClose;
             this.websocket.onopen = self.onOpen;
+            this.websocket.emit("open", "hello")
         },
         websocketOnMessage: function (e) { //数据接收
             console.log(e);

@@ -9,6 +9,8 @@ import (
 	"github.com/muka/go-bluetooth/bluez/profile/device"
 	"github.com/muka/go-bluetooth/bluez/profile/gatt"
 	log "github.com/sirupsen/logrus"
+	"os"
+	"os/signal"
 	"time"
 )
 
@@ -175,7 +177,7 @@ func (bracelet *Bracelet) GetVersion() (v interface{}, err error) {
 	return bracelet.getRet(callback)
 }
 
-func (bracelet *Bracelet) StartHeartBeat() (ok interface{}, err error) {
+func (bracelet *Bracelet) StringTracing() (ok interface{}, err error) {
 	base := NewBase()
 	base.CommandId = 0x06
 	base.Content = []byte{0x01}
@@ -186,7 +188,7 @@ func (bracelet *Bracelet) StartHeartBeat() (ok interface{}, err error) {
 	return bracelet.getRet(callback)
 }
 
-func (bracelet *Bracelet) StopHeartBeat() (ok interface{}, err error) {
+func (bracelet *Bracelet) StopTracing() (ok interface{}, err error) {
 	base := NewBase()
 	base.CommandId = 0x06
 	base.Content = []byte{0x02}
@@ -197,7 +199,7 @@ func (bracelet *Bracelet) StopHeartBeat() (ok interface{}, err error) {
 	return bracelet.getRet(callback)
 }
 
-func (bracelet *Bracelet) GetHeartBeat() (h interface{}, err error) {
+func (bracelet *Bracelet) Tracing() (h interface{}, err error) {
 	base := NewBase()
 	base.CommandId = 0x06
 	base.Content = []byte{0x00}
@@ -257,4 +259,45 @@ func (bracelet *Bracelet) getRet(callback func(*[]byte) (interface{}, error)) (r
 	case <-time.After(3 * time.Second):
 		return nil, errors.New("time out")
 	}
+}
+func TestOperration() {
+	var bracelets []*Bracelet
+	exif := func() {
+		for _, b := range bracelets {
+			log.Infof("disconnecting %s", b.Name)
+			_ = b.Disconnect()
+		}
+	}
+	defer exif()
+
+	c := make(chan os.Signal, 1)
+	ch := make(chan string)
+	signal.Notify(c, os.Interrupt)
+
+	bracelet, _ := OpenBracelet("/org/bluez/hci0/dev_E2_C9_18_4F_8F_D9", ch)
+	bracelets = append(bracelets, bracelet)
+	capacity, _ := bracelet.GetBattery()
+	log.Infof("剩余电量为%d", capacity)
+	time.Sleep(2 * time.Second)
+	//HandleBracelet(c)
+	v, _ := bracelet.GetVersion()
+	log.Infof("版本号为%s", v)
+	time.Sleep(2 * time.Second)
+	log.Info(bracelet.Notification("曹祖鹏"))
+	log.Info(bracelet.Reset())
+	time.Sleep(100 * time.Millisecond)
+	log.Info(bracelet.StringTracing())
+	for {
+		select {
+		case <-time.After(time.Second * 1):
+			resp, _ := bracelet.Tracing()
+			log.Infof("心跳为%v", resp)
+		case sig := <-c:
+			log.Info("收到操作系统的消息%s", sig)
+			goto end
+		}
+	}
+end:
+	log.Info(bracelet.StopTracing())
+	ch <- "退出"
 }
