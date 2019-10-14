@@ -33,6 +33,6 @@ func NewResponse(btr *[]byte) (h HeartBeatResponse, err error) {
 		return h, nil
 
 	} else {
-		return h, errors.New("not suitabe")
+		return h, errors.New("not suitable byte array")
 	}
 }

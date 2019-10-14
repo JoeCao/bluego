@@ -2,7 +2,6 @@ package main
 
 import (
 	"bluego/discovery"
-	"bluego/http"
 	"bluego/s18"
 	log "github.com/sirupsen/logrus"
 )
@@ -25,7 +24,7 @@ func HandleBracelet(ch chan string) {
 	for {
 		select {
 		case dev := <-braceletChan:
-			bracelet, _ := s18.RBracelet(dev, ch)
+			bracelet, _ := s18.RBracelet(dev)
 			bracelets = append(bracelets, bracelet)
 
 		case sig := <-ch:
@@ -38,5 +37,6 @@ end:
 }
 
 func main() {
-	http.Init()
+	//http.Init()
+	s18.TestOperation()
 }

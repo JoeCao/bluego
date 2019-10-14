@@ -188,7 +188,7 @@ Vue.component('tabel-detail', {
             this.websocket.on('command_response', self.commandOnMessage)
             this.websocket.onclose = self.websocketClose;
             this.websocket.onopen = self.onOpen;
-            this.websocket.emit("open", "hello")
+            this.websocket.emit("message", "hello")
         },
         websocketOnMessage: function (e) { //数据接收
             console.log(e);

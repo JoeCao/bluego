@@ -47,8 +47,8 @@ Vue.component('view-detail', {
 
             namespace = '/test';
 
-            wsuri = (location.protocol + '//' + document.domain + ':' + location.port + namespace);
-            this.websocket = io.connect(wsuri)
+            wsuri = ('ws://' + document.domain + ':' + location.port);
+            this.websocket = io({transports: ['websocket'], upgrade: false});
             this.websocket.on('server_response', self.websocketOnMessage)
             this.websocket.onmessage = self.websocketOnMessage;
             this.websocket.onclose = self.websocketClose;
