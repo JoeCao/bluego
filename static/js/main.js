@@ -22,7 +22,7 @@ Vue.component('view-detail', {
     },
     methods: {
         fillRunning: function (key, data) {
-            console.log(key)
+            console.log("key=" + key)
             let index = this.runnings.findIndex(x => x.bracelet_name === key);
             console.log(index)
             if (index >= 0) {
@@ -47,8 +47,8 @@ Vue.component('view-detail', {
 
             namespace = '/test';
 
-            wsuri = ('ws://' + document.domain + ':' + location.port);
-            this.websocket = io({transports: ['websocket'], upgrade: false});
+            wsuri = ('ws://' + document.domain + ':' + location.port + namespace);
+            this.websocket = io(wsuri, {transports: ['websocket'], upgrade: false});
             this.websocket.on('server_response', self.websocketOnMessage)
             this.websocket.onmessage = self.websocketOnMessage;
             this.websocket.onclose = self.websocketClose;
@@ -56,8 +56,10 @@ Vue.component('view-detail', {
         },
         websocketOnMessage: function (e) { //数据接收
             console.log(e);
+            var j = JSON.parse(e)
+            console.log(j.bracelet_name)
             // this.running = e;
-            this.fillRunning(e.bracelet_name, e)
+            this.fillRunning(j.bracelet_name, j)
 
         },
         sendMessage: function (commCh, agentData) {//数据发送

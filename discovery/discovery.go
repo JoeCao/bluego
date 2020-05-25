@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func RunWithin(adapterID string, duration uint8) ([]map[string]string, error) {
+func RunWithin(adapterID string, duration uint8) (*map[string]*device.Device1, error) {
 
 	a, err := adapter.GetAdapter(adapterID)
 	if err != nil {
@@ -31,7 +31,8 @@ func RunWithin(adapterID string, duration uint8) ([]map[string]string, error) {
 		return nil, err
 	}
 	defer cancel()
-	var dlist []map[string]string
+	//var dlist []map[string]string
+	var dmap = make(map[string]*device.Device1)
 	ch := make(chan int)
 	go func() {
 		select {
@@ -56,18 +57,19 @@ func RunWithin(adapterID string, duration uint8) ([]map[string]string, error) {
 				log.Errorf("%s: not found", ev.Path)
 				continue
 			}
-			m := map[string]string{
-				"index":             fmt.Sprintf("%s", ev.Path),
-				"addr":              dev.Properties.Address,
-				"CompleteLocalName": dev.Properties.Name,
-				"addrType":          dev.Properties.AddressType,
-			}
-			dlist = append(dlist, m)
+			//m := map[string]string{
+			//	"index":             fmt.Sprintf("%s", ev.Path),
+			//	"addr":              dev.Properties.Address,
+			//	"CompleteLocalName": dev.Properties.Name,
+			//	"addrType":          dev.Properties.AddressType,
+			//}
+			dmap[fmt.Sprintf("%s", ev.Path)] = dev
+
 			log.Infof("name=%s addr=%s addrType=%s rssi=%d",
 				dev.Properties.Name, dev.Properties.Address,
 				dev.Properties.AddressType, dev.Properties.RSSI)
 		case _ = <-ch:
-			return dlist, nil
+			return &dmap, nil
 		}
 	}
 }

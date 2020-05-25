@@ -2,6 +2,7 @@ package main
 
 import (
 	"bluego/discovery"
+	"bluego/http"
 	"bluego/s18"
 	log "github.com/sirupsen/logrus"
 )
@@ -37,6 +38,7 @@ end:
 }
 
 func main() {
-	//http.Init()
-	s18.TestOperation()
+	http.Init()
+	//log.SetLevel(log.DebugLevel)
+	//s18.TestOperation()
 }

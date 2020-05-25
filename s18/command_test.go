@@ -34,3 +34,11 @@ func TestBase_ToFrame2(t *testing.T) {
 	s := fmt.Sprintf("%x", b)
 	logrus.Infof(s)
 }
+
+func TestBase_ToFrame3(t *testing.T) {
+	var slice []int
+
+	//slice = append(slice, 2)
+	slice = append(slice, 7)
+	logrus.Info(slice[len(slice)-1])
+}

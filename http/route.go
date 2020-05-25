@@ -6,11 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/godbus/dbus"
 	engineio "github.com/googollee/go-engine.io"
 	"github.com/googollee/go-engine.io/transport"
 	"github.com/googollee/go-engine.io/transport/websocket"
 	socketio "github.com/googollee/go-socket.io"
+	"github.com/muka/go-bluetooth/bluez/profile/device"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"time"
@@ -18,6 +18,8 @@ import (
 
 var SocketioServer *socketio.Server
 var ConnectedMap = make(map[string]*s18.Bracelet)
+var DiscoveredMap map[string]*device.Device1
+var TestConn socketio.Conn
 
 func respStr(resp string) string {
 	m := make(map[string]string)
@@ -50,8 +52,9 @@ func Init() {
 		log.Infof("收到消息%s", msg)
 		if ConnectedMap[msg] != nil {
 			brace := ConnectedMap[msg]
-			s.Emit("server_response", respStr("实时心率监测开始"))
+			//s.Emit("server_response", respStr("实时心率监测开始"))
 			_, _ = brace.StartTracing()
+			s.Emit("command_response", respStr("实时心率检测开始"))
 			go func() {
 				for {
 					select {
@@ -70,7 +73,10 @@ func Init() {
 							"data":          "运动中",
 							"bracelet_name": brace.Name,
 						})
-						s.Emit("server_response", string(b))
+						if TestConn != nil {
+							TestConn.Emit("server_response", string(b))
+						}
+						//s.Emit("server_response", string(b))
 						log.Infof("%v", string(b))
 					case sig := <-brace.StopTraceChannel:
 						log.Infof("收到结束监控的消息%s", sig)
@@ -80,7 +86,6 @@ func Init() {
 			end:
 				log.Infof("%s的实时心率监控结束", brace.Name)
 			}()
-			s.Emit("command_response", respStr("实时心率检测开始"))
 
 		}
 	})
@@ -100,18 +105,31 @@ func Init() {
 			log.Infof("已经存在的设备%s", msg)
 			return
 		}
-		s.Emit("server_response", respStr("开始连接手环"))
-		bracelet, err := s18.OpenBracelet(dbus.ObjectPath(msg))
-		if err != nil {
-			log.Errorf("连接%s失败", msg)
-			return
+		if dev, ok := DiscoveredMap[msg]; ok {
+			s.Emit("server_response", respStr("开始连接手环"))
+			bracelet, err := s18.RBracelet(dev)
+			if err != nil {
+				log.Errorf("连接%s失败", msg)
+				return
+			}
+			ConnectedMap[bracelet.Name] = bracelet
+			log.Infof("手环%s连接成功", msg)
+			s.Emit("command_response", respStr("手环已经连接"))
 		}
-		ConnectedMap[bracelet.Name] = bracelet
-		s.Emit("command_response", respStr("手环已经连接"))
+
 	})
 	SocketioServer.OnEvent("", "message", func(s socketio.Conn, msg string) {
 		log.Infof("notice:%s", msg)
 		s.Emit("command_response", "reply to "+msg)
+	})
+	SocketioServer.OnConnect("/test", func(conn socketio.Conn) error {
+		log.Infof("test通道打开")
+		TestConn = conn
+		return nil
+	})
+	SocketioServer.OnDisconnect("/test", func(conn socketio.Conn, s string) {
+		log.Infof("test通道关闭")
+		TestConn = nil
 	})
 	go SocketioServer.Serve()
 	defer SocketioServer.Close()
@@ -125,9 +143,16 @@ func Init() {
 	})
 
 	r.GET("/scan", func(c *gin.Context) {
-		list, _ := discovery.RunWithin("hci0", 10)
+		m, _ := discovery.RunWithin("hci0", 10)
+		DiscoveredMap = *m
 		var devs []map[string]string
-		for _, l := range list {
+		for k, dev := range DiscoveredMap {
+			l := map[string]string{
+				"index":             k,
+				"addr":              dev.Properties.Address,
+				"CompleteLocalName": dev.Properties.Name,
+				"addrType":          dev.Properties.AddressType,
+			}
 			devs = append(devs, l)
 
 		}

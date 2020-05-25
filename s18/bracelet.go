@@ -130,13 +130,30 @@ func (brace *Bracelet) InitBracelet() (err error) {
 					log.Debugf("获取的返回字节为%x", b1)
 					brace.retCh <- &b1
 				} else if b1[0] == 0x68 {
-					_ = binary.Write(buffer, binary.BigEndian, b1)
+					if buffer.Len() > 0 {
+						log.Debugf("已经有尾部数据%x，加入新的头部数据%x", buffer.Bytes(), b1)
+						tmpbuf := &bytes.Buffer{}
+						_ = binary.Write(tmpbuf, binary.BigEndian, b1)
+						_ = binary.Write(tmpbuf, binary.BigEndian, buffer.Bytes())
+						tmp := tmpbuf.Bytes()
+						brace.retCh <- &tmp
+						buffer.Reset()
+					} else {
+						log.Debugf("只有头部数据，暂时缓存字节%x", b1)
+						_ = binary.Write(buffer, binary.BigEndian, b1)
+					}
 				} else if b1[len(b1)-1] == 0x16 {
-					_ = binary.Write(buffer, binary.BigEndian, b1)
-					tmp := buffer.Bytes()
-					log.Debugf("获取返回字节为%x", tmp)
-					brace.retCh <- &tmp
-					buffer.Reset()
+					if buffer.Len() > 0 {
+						log.Debugf("剩余部分字节%x", b1)
+						_ = binary.Write(buffer, binary.BigEndian, b1)
+						tmp := buffer.Bytes()
+						log.Debugf("获取完整返回字节为%x", tmp)
+						brace.retCh <- &tmp
+						buffer.Reset()
+					} else {
+						log.Debugf("只有尾部数据，暂时缓存%x", b1)
+						_ = binary.Write(buffer, binary.BigEndian, b1)
+					}
 				}
 			case sig := <-brace.QuitChannel:
 				log.Infof("收到退出的消息 %s", sig)
@@ -314,11 +331,11 @@ func TestOperation() {
 	log.Info(bracelet.StartTracing())
 	for {
 		select {
-		case <-time.After(time.Second * 1):
+		case <-time.After(time.Second * 2):
 			resp, _ := bracelet.Tracing()
 			log.Infof("心跳为%v", resp)
 		case sig := <-c:
-			log.Info("收到操作系统的消息%s", sig)
+			log.Infof("收到操作系统的消息%s", sig)
 			goto end
 		}
 	}
