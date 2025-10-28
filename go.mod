@@ -2,7 +2,7 @@ module bluego
 
 require (
 	github.com/fatih/structs v1.1.0 // indirect
-	github.com/gin-gonic/gin v1.4.0
+	github.com/gin-gonic/gin v1.7.7
 	github.com/godbus/dbus v4.1.0+incompatible
 	github.com/googollee/go-engine.io v1.4.1
 	github.com/googollee/go-socket.io v1.4.2
